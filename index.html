@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="theme-color" content="#123d35">
+  <meta name="description" content="寫一張獨一無二的聖誕許願卡，畫畫、貼照片，再寄給聖誕老公公。">
+  <title>文化幣花不掉的聖誕老公公許願池</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="site">
+  <header class="topbar">
+    <a class="brand" href="./"><span class="brand-mark">✉</span>文化幣花不掉的聖誕老公公許願池</a>
+    <div class="top-note"><span>❄</span> 一封心意，從這裡出發，但未必會到</div>
+  </header>
+  <section class="home-screen" id="home-screen" aria-label="聖誕許願郵局首頁">
+  <div class="hero">
+    <div>
+      <div class="eyebrow">✨ 聖誕限定・許願郵局開張</div>
+      <h1>把心願<em>寄出去！</em><br><em>但未必成真喔</em></h1>
+      <p>寫下你的悄悄話，畫上最喜歡的顏色，再貼上珍貴的照片。這張獨一無二的卡片，會送到聖誕老公公的信箱。</p>
+      <button type="button" class="start-button" id="start-wish">🎅　開始許願</button>
+      <div class="steps"><span class="step">① 通過聖誕小考驗</span><span class="step-dot">✦</span><span class="step">② 創作聖誕卡片</span><span class="step-dot">✦</span><span class="step">③ 寄出願望</span></div>
+    </div>
+    <div class="hero-art" aria-hidden="true"><div class="moon"></div><div class="letter"></div><div class="envelope"></div><span class="spark s1">✧</span><span class="spark s2">✳</span><span class="spark s3">✦</span><span class="mini-star">🎄</span></div>
+  </div>
+  <div class="home-features" aria-label="許願玩法"><div class="feature"><span>✏️</span><div><strong>寫下你的心願</strong><p>想說的話，都能放進卡片裡。</p></div></div><div class="feature"><span>🎨</span><div><strong>畫出聖誕魔法</strong><p>用畫筆、貼紙和照片自由創作。</p></div></div><div class="feature"><span>💌</span><div><strong>寄往聖誕郵局</strong><p>完成的卡片會送到聖誕老公公的信箱。</p></div></div></div>
+  </section>
+  <section class="quiz-screen" id="quiz-screen" aria-label="聖誕入場小考驗" hidden>
+    <div class="quiz-shell"><div class="quiz-top"><button type="button" class="back-button" id="quiz-home">⌂　回首頁</button><span>🎄 聖誕入場小考驗</span></div>
+      <div class="quiz-progress"><span class="progress-dot active" id="progress-one">1</span><span class="progress-line"></span><span class="progress-dot" id="progress-two">2</span></div>
+      <div class="quiz-card"><div class="quiz-deco" aria-hidden="true">❄</div><span class="quiz-kicker" id="quiz-kicker">第一題</span><div class="quiz-emoji" id="quiz-emoji" aria-hidden="true">🎅🏻</div><h2 id="quiz-question" tabindex="-1">你今年是好孩子嗎？</h2><div class="quiz-options"><button type="button" class="answer-button yes-button" id="answer-yes">是</button><button type="button" class="answer-button no-button" id="answer-no">不是</button></div></div>
+    </div>
+  </section>
+  <main class="workspace" id="make-card" hidden><div class="workspace-inner">
+    <div class="section-heading"><div><button type="button" class="editor-back" id="editor-home">⌂　回首頁</button><br><span class="section-kicker">Santa's little workshop</span><h2>好好許願啊 不然聖誕老公公看不清楚就不送了</h2></div><p>每一筆、每一字，全看聖誕老公心情</p></div>
+    <div class="editor-grid">
+      <aside class="tools" aria-label="卡片工具">
+        <h3 class="tool-title"><span>🎨</span> 創作工具</h3>
+        <div class="tool-buttons">
+          <button type="button" class="tool-button active" data-tool="select"><b>☝</b>移動／編輯</button>
+          <button type="button" class="tool-button" data-tool="pen"><b>✎</b>畫筆</button>
+          <button type="button" class="tool-button" data-tool="eraser"><b>◩</b>橡皮擦</button>
+          <button type="button" class="tool-button" id="add-text"><b>Ｔ</b>加文字</button>
+          <button type="button" class="tool-button wide" id="add-photo"><b>▧</b>上傳照片</button>
+          <input id="photo-input" type="file" accept="image/*" hidden>
+        </div>
+        <h3 class="tool-title"><span>🌈</span> 畫筆顏色</h3>
+        <div class="colors" id="colors">
+          <button type="button" class="swatch active" style="--c:#d4483d" data-color="#d4483d" aria-label="紅色"></button>
+          <button type="button" class="swatch" style="--c:#f0ad3c" data-color="#f0ad3c" aria-label="金黃色"></button>
+          <button type="button" class="swatch" style="--c:#2d7d64" data-color="#2d7d64" aria-label="綠色"></button>
+          <button type="button" class="swatch" style="--c:#5683b9" data-color="#5683b9" aria-label="藍色"></button>
+          <button type="button" class="swatch" style="--c:#a364aa" data-color="#a364aa" aria-label="紫色"></button>
+          <button type="button" class="swatch" style="--c:#2e5047" data-color="#2e5047" aria-label="深綠色"></button>
+        </div>
+        <label class="range-label" for="brush-size">筆畫粗細 <b id="brush-value">8 px</b></label>
+        <input class="range" id="brush-size" type="range" min="2" max="40" value="8">
+        <p class="hint">選擇畫筆或橡皮擦，就可以直接在卡片上畫畫。</p>
+        <div id="size-control" hidden><label class="range-label" for="item-size">選取項目大小</label><input class="range" id="item-size" type="range" min="6" max="70" value="30"></div>
+        <hr class="divider">
+        <h3 class="tool-title"><span>⭐</span> 聖誕小貼紙</h3>
+        <div class="tool-buttons"><button type="button" class="tool-button" data-sticker="⭐"><b>⭐</b>星星</button><button type="button" class="tool-button" data-sticker="🎄"><b>🎄</b>聖誕樹</button><button type="button" class="tool-button" data-sticker="🎁"><b>🎁</b>禮物</button><button type="button" class="tool-button" data-sticker="❄️"><b>❄️</b>雪花</button></div>
+        <hr class="divider">
+        <label class="field-label" for="sender">你的名字（可選）</label><input class="field" id="sender" maxlength="40" placeholder="小小許願人">
+        <label class="field-label email-label" for="email">你的 Email（必填）</label><input class="field" id="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" required>
+        <p class="hint">Email 與卡片圖片會寄到聖誕老公公的信箱，不會公開展示。</p>
+      </aside>
+      <div class="card-panel">
+        <div class="panel-top"><div><strong>你的聖誕卡片</strong><br><small>點文字可修改，拖動紅色圓點可移動。可以增加圖讓聖誕老公公知道要買甚麼。</small></div><span class="status">創作中</span></div>
+        <div class="card-outer"><div class="card" id="card"><div class="card-head">Dear Santa,</div><div class="card-sub">MY CHRISTMAS WISH</div><div class="stamp">★</div><div class="items" id="items"></div><canvas class="canvas" id="drawing" width="900" height="600" aria-label="卡片畫布"></canvas></div></div>
+        <div class="card-footer"><div class="footer-actions"><button type="button" class="light-button" id="undo">↶ 上一步畫筆</button><button type="button" class="light-button danger" id="remove-item">刪除選取項目</button><button type="button" class="light-button" id="download">下載卡片</button></div><button type="button" class="send-button" id="send">✉　寄給聖誕老公公</button></div>
+      </div>
+    </div>
+    <p class="footnote">卡片寄出後不會保存在網站。建議先下載留念；如果沒收到郵件，請檢查垃圾郵件。</p>
+  </div></main>
+</div>
+<form id="mail-form" action="https://formsubmit.co/peterchiu331hi@gmail.com" method="POST" enctype="multipart/form-data" hidden>
+  <input type="text" name="name" id="mail-name">
+  <input type="email" name="email" id="mail-email">
+  <textarea name="message" id="mail-message"></textarea>
+  <input type="file" name="attachment" id="mail-attachment" accept="image/png">
+  <input type="hidden" name="_subject" value="聖誕許願郵局收到新卡片">
+  <input type="hidden" name="_next" id="mail-next">
+  <input type="hidden" name="_url" id="mail-url">
+  <input type="text" name="_honey" tabindex="-1" autocomplete="off">
+</form>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="challenge-backdrop" id="challenge-modal" hidden><div class="challenge-dialog" id="challenge-dialog" role="dialog" aria-modal="true" aria-labelledby="challenge-title" aria-describedby="challenge-message"><div class="challenge-icon" id="challenge-icon" aria-hidden="true">🤔</div><h2 id="challenge-title">你確定嗎？</h2><p id="challenge-message"></p><button type="button" class="challenge-confirm" id="challenge-confirm">確定</button></div></div>
+<script src="./app.js" defer></script>
+</body></html>
