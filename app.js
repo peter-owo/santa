@@ -147,9 +147,9 @@
         ta.addEventListener('input', () => { item.text = ta.value; });
         ta.addEventListener('focus', () => { state.selected = item.id; updateSelection(); });
         el.appendChild(ta);
-      } else if (item.type === 'photo') {
+      } else if (item.type === 'photo' || item.type === 'image-sticker') {
         const img = document.createElement('img');
-        img.src = item.src; img.alt = '上傳的照片'; el.appendChild(img);
+        img.src = item.src; img.alt = item.type === 'photo' ? '上傳的照片' : '角色貼紙'; el.appendChild(img);
       } else {
         el.textContent = item.text;
       }
@@ -253,6 +253,16 @@
     });
   }
   document.querySelectorAll('[data-sticker]').forEach(b => b.addEventListener('click', () => addItem({ type: 'sticker', x: 37, y: 45, w: 9, h: 13, text: b.dataset.sticker, rotate: -8 })));
+  document.querySelectorAll('[data-image-sticker]').forEach(button => button.addEventListener('click', async () => {
+    try {
+      const src = button.dataset.imageSticker;
+      const img = await loadImage(src);
+      const w = 20;
+      const h = Math.min(34, w * W / H * img.height / img.width);
+      const count = state.items.filter(item => item.type === 'image-sticker').length;
+      addItem({ type: 'image-sticker', x: 35 + count % 4 * 7, y: 38 + count % 3 * 5, w, h, src, rotate: count % 2 ? 5 : -5 });
+    } catch { toast('貼紙載入失敗，請重新整理後再試一次'); }
+  }));
   $('undo').addEventListener('click', () => { const snap = state.history.pop(); if (snap) ctx.putImageData(snap, 0, 0); else toast('目前沒有可以復原的筆畫'); });
   $('remove-item').addEventListener('click', () => { if (!state.selected) return; state.items = state.items.filter(i => i.id !== state.selected); state.selected = null; renderItems(); });
 
@@ -284,6 +294,10 @@
       if (item.type === 'text') {
         c.fillStyle = '#31564b'; c.font = '700 23px "Noto Sans TC", sans-serif'; c.textBaseline = 'top';
         wrapText(c, item.text, w).slice(0, Math.floor(h / 35)).forEach((line, n) => c.fillText(line, x, y + n * 35));
+      } else if (item.type === 'image-sticker') {
+        const img = await loadImage(item.src);
+        c.save(); c.translate(x + w / 2, y + h / 2); c.rotate((item.rotate || 0) * Math.PI / 180);
+        c.drawImage(img, -w / 2, -h / 2, w, h); c.restore();
       } else if (item.type === 'photo') {
         const img = await loadImage(item.src);
         c.save(); c.translate(x + w / 2, y + h / 2); c.rotate((item.rotate || 0) * Math.PI / 180);
