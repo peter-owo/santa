@@ -5,7 +5,8 @@
   const ctx = canvas.getContext('2d');
   const itemsEl = document.getElementById('items');
   const initialText = '親愛的聖誕老公公：\n今年我希望…';
-  const state = { tool: 'select', color: '#d4483d', size: 8, items: [], selected: null, history: [], drawing: false, gesture: null, busy: false };
+  const firstPage = { items: [], drawing: null, history: [] };
+  const state = { tool: 'select', color: '#d4483d', size: 8, pages: [firstPage], pageIndex: 0, items: firstPage.items, selected: null, history: firstPage.history, drawing: false, gesture: null, busy: false };
   const $ = id => document.getElementById(id);
   let toastTimer;
 
@@ -116,6 +117,7 @@
   }
   function addItem(item) {
     item.id = crypto.randomUUID();
+    if (item.type === 'text' && !item.fontSize) item.fontSize = 23;
     state.items.push(item);
     state.selected = item.id;
     setTool('select');
@@ -132,6 +134,10 @@
     el.style.width = item.w + '%'; el.style.height = item.h + '%';
     el.style.setProperty('--rotate', (item.rotate || 0) + 'deg');
     if (item.type === 'sticker') el.style.fontSize = item.w * .75 + 'cqw';
+    if (item.type === 'text') {
+      const textarea = el.querySelector('textarea');
+      if (textarea) textarea.style.fontSize = (item.fontSize || 23) / 9 + 'cqw';
+    }
     el.classList.toggle('rotate-below', item.y < 10);
   }
   function renderItems() {
@@ -139,11 +145,11 @@
     state.items.forEach(item => {
       const el = document.createElement('div');
       el.className = 'item ' + item.type;
-      applyItemStyle(el, item);
       el.dataset.id = item.id;
       if (item.type === 'text') {
         const ta = document.createElement('textarea');
         ta.value = item.text;
+        ta.placeholder = '在這裡繼續寫下你的心願…';
         ta.maxLength = 1000;
         ta.setAttribute('aria-label', '卡片文字');
         ta.addEventListener('input', () => { item.text = ta.value; });
@@ -155,6 +161,7 @@
       } else {
         el.textContent = item.text;
       }
+      applyItemStyle(el, item);
       if (item.type === 'text') {
         const handle = document.createElement('button');
         handle.type = 'button'; handle.className = 'drag-handle'; handle.textContent = '✥';
@@ -163,24 +170,79 @@
         el.appendChild(handle);
         el.addEventListener('pointerdown', () => { if (state.tool === 'select') { state.selected = item.id; updateSelection(); } });
       } else {
-        for (const [corner, sx, sy] of [['nw', -1, -1], ['ne', 1, -1], ['sw', -1, 1], ['se', 1, 1]]) {
-          const handle = document.createElement('button');
-          handle.type = 'button'; handle.className = 'resize-handle ' + corner;
-          handle.setAttribute('aria-label', '拖曳縮放');
-          handle.addEventListener('pointerdown', event => startGesture(event, item, 'resize', sx, sy));
-          el.appendChild(handle);
-        }
-        const rotateHandle = document.createElement('button');
-        rotateHandle.type = 'button'; rotateHandle.className = 'rotate-handle'; rotateHandle.textContent = '↻';
-        rotateHandle.setAttribute('aria-label', '拖曳旋轉');
-        rotateHandle.addEventListener('pointerdown', event => startGesture(event, item, 'rotate'));
-        el.appendChild(rotateHandle);
         el.addEventListener('pointerdown', event => { if (state.tool === 'select') startGesture(event, item, 'move'); });
       }
+      for (const [corner, sx, sy] of [['nw', -1, -1], ['ne', 1, -1], ['sw', -1, 1], ['se', 1, 1]]) {
+        const handle = document.createElement('button');
+        handle.type = 'button'; handle.className = 'resize-handle ' + corner;
+        handle.setAttribute('aria-label', '拖曳縮放');
+        handle.addEventListener('pointerdown', event => startGesture(event, item, 'resize', sx, sy));
+        el.appendChild(handle);
+      }
+      const rotateHandle = document.createElement('button');
+      rotateHandle.type = 'button'; rotateHandle.className = 'rotate-handle'; rotateHandle.textContent = '↻';
+      rotateHandle.setAttribute('aria-label', '拖曳旋轉');
+      rotateHandle.addEventListener('pointerdown', event => startGesture(event, item, 'rotate'));
+      el.appendChild(rotateHandle);
       itemsEl.appendChild(el);
     });
     updateSelection();
   }
+  function saveActivePage() {
+    const page = state.pages[state.pageIndex];
+    page.items = state.items;
+    page.history = state.history;
+    if (!page.drawing) {
+      page.drawing = document.createElement('canvas');
+      page.drawing.width = W; page.drawing.height = H;
+    }
+    const drawingContext = page.drawing.getContext('2d');
+    drawingContext.clearRect(0, 0, W, H);
+    drawingContext.drawImage(canvas, 0, 0);
+  }
+  function renderPageNavigation() {
+    const list = $('page-list');
+    list.textContent = '';
+    state.pages.forEach((page, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'page-button' + (index === state.pageIndex ? ' active' : '');
+      button.textContent = '第 ' + (index + 1) + ' 頁';
+      if (index === state.pageIndex) button.setAttribute('aria-current', 'page');
+      button.addEventListener('click', () => showPage(index));
+      list.appendChild(button);
+    });
+    $('remove-page').hidden = state.pages.length === 1;
+    $('add-page-label').textContent = state.pages.length === 1 ? '新增第二頁' : '新增下一頁';
+  }
+  function showPage(index, saveCurrent = true) {
+    if (index === state.pageIndex && saveCurrent) return;
+    if (saveCurrent) saveActivePage();
+    state.pageIndex = index;
+    state.items = state.pages[index].items;
+    state.history = state.pages[index].history;
+    state.selected = null;
+    state.gesture = null;
+    state.drawing = false;
+    ctx.clearRect(0, 0, W, H);
+    if (state.pages[index].drawing) ctx.drawImage(state.pages[index].drawing, 0, 0);
+    setTool('select');
+    renderItems();
+    renderPageNavigation();
+  }
+  $('add-page').addEventListener('click', () => {
+    state.pages.push({ items: [], drawing: null, history: [] });
+    showPage(state.pages.length - 1);
+    const item = addItem({ type: 'text', x: 12, y: 29, w: 57, h: 32, text: '' });
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => itemsEl.querySelector('[data-id="' + item.id + '"] textarea')?.focus(), 100);
+  });
+  $('remove-page').addEventListener('click', () => {
+    if (state.pages.length === 1 || !window.confirm('確定刪除第 ' + (state.pageIndex + 1) + ' 頁嗎？')) return;
+    const next = Math.min(state.pageIndex, state.pages.length - 2);
+    state.pages.splice(state.pageIndex, 1);
+    showPage(next, false);
+  });
   function startGesture(event, item, kind, sx = 0, sy = 0) {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault(); event.stopPropagation();
@@ -190,7 +252,7 @@
     const centerY = rect.top + (item.y + item.h / 2) / 100 * rect.height;
     state.gesture = {
       id: item.id, kind, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
-      x: item.x, y: item.y, w: item.w, h: item.h, rotate: item.rotate || 0,
+      x: item.x, y: item.y, w: item.w, h: item.h, fontSize: item.fontSize || 23, rotate: item.rotate || 0,
       rect, centerX, centerY, widthPx: item.w / 100 * rect.width, heightPx: item.h / 100 * rect.height,
       sx, sy, pointerAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX)
     };
@@ -213,10 +275,11 @@
       const dx = event.clientX - m.startX, dy = event.clientY - m.startY;
       const localX = dx * cos + dy * sin, localY = -dx * sin + dy * cos;
       const projected = (m.sx * localX * m.widthPx + m.sy * localY * m.heightPx) / (m.widthPx ** 2 + m.heightPx ** 2);
-      const minScale = Math.max(.15, 28 / m.widthPx, 28 / m.heightPx);
-      const maxScale = Math.min(80 / m.w, 80 / m.h);
+      const minScale = Math.max(.15, 28 / m.widthPx, 28 / m.heightPx, item.type === 'text' ? 12 / m.fontSize : 0);
+      const maxScale = Math.min(80 / m.w, 80 / m.h, item.type === 'text' ? 80 / m.fontSize : Infinity);
       const scale = Math.max(minScale, Math.min(maxScale, 1 + projected));
       item.w = m.w * scale; item.h = m.h * scale;
+      if (item.type === 'text') item.fontSize = m.fontSize * scale;
       const localShiftX = m.sx * (item.w - m.w) / 200 * m.rect.width;
       const localShiftY = m.sy * (item.h - m.h) / 200 * m.rect.height;
       const centerX = m.centerX + localShiftX * cos - localShiftY * sin;
@@ -276,7 +339,7 @@
     try {
       const src = await shrinkImage(file);
       addItem({ type: 'photo', x: 57, y: 35, w: 30, h: 33, src, rotate: 4 });
-      toast('照片已貼上！拖動紅點可以移動');
+      toast('照片已貼上！直接拖曳就能移動');
     } catch { toast('照片讀取失敗，請換一張試試'); }
     event.target.value = '';
   });
@@ -306,7 +369,7 @@
     } catch { toast('貼紙載入失敗，請重新整理後再試一次'); }
   }));
   $('undo').addEventListener('click', () => { const snap = state.history.pop(); if (snap) ctx.putImageData(snap, 0, 0); else toast('目前沒有可以復原的筆畫'); });
-  $('remove-item').addEventListener('click', () => { if (!state.selected) return; state.items = state.items.filter(i => i.id !== state.selected); state.selected = null; renderItems(); });
+  $('remove-item').addEventListener('click', () => { if (!state.selected) return; const index = state.items.findIndex(i => i.id === state.selected); if (index !== -1) state.items.splice(index, 1); state.selected = null; renderItems(); });
 
   function wrapText(c, text, width) {
     const rows = [];
@@ -322,8 +385,7 @@
     return rows;
   }
   function loadImage(src) { return new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; }); }
-  async function snapshot() {
-    await document.fonts.ready;
+  async function snapshotPage(page) {
     const out = document.createElement('canvas'); out.width = W; out.height = H;
     const c = out.getContext('2d');
     c.fillStyle = '#fff9e8'; c.fillRect(0, 0, W, H);
@@ -331,11 +393,14 @@
     c.fillStyle = '#c84c3e'; c.font = '900 40px "Noto Sans TC", sans-serif'; c.fillText('Dear Santa,', 63, 75);
     c.fillStyle = '#8caa8e'; c.font = '800 14px "DM Sans", sans-serif'; c.fillText('M Y   C H R I S T M A S   W I S H', 64, 112);
     c.save(); c.translate(793, 77); c.rotate(8 * Math.PI / 180); c.strokeStyle = '#c86a54'; c.lineWidth = 2; c.setLineDash([4, 4]); c.strokeRect(-47, -41, 94, 82); c.setLineDash([]); c.fillStyle = '#c86a54'; c.font = '50px sans-serif'; c.fillText('★', -23, 19); c.restore();
-    for (const item of state.items) {
+    for (const item of page.items) {
       const x = item.x / 100 * W, y = item.y / 100 * H, w = item.w / 100 * W, h = item.h / 100 * H;
       if (item.type === 'text') {
-        c.fillStyle = '#31564b'; c.font = '700 23px "Noto Sans TC", sans-serif'; c.textBaseline = 'top';
-        wrapText(c, item.text, w).slice(0, Math.floor(h / 35)).forEach((line, n) => c.fillText(line, x, y + n * 35));
+        const fontSize = item.fontSize || 23, lineHeight = fontSize * 1.55;
+        c.save(); c.translate(x + w / 2, y + h / 2); c.rotate((item.rotate || 0) * Math.PI / 180);
+        c.fillStyle = '#31564b'; c.font = '700 ' + fontSize + 'px "Noto Sans TC", sans-serif'; c.textBaseline = 'top';
+        wrapText(c, item.text, w).slice(0, Math.floor(h / lineHeight)).forEach((line, n) => c.fillText(line, -w / 2, -h / 2 + n * lineHeight));
+        c.restore();
       } else if (item.type === 'image-sticker') {
         const img = await loadImage(item.src);
         c.save(); c.translate(x + w / 2, y + h / 2); c.rotate((item.rotate || 0) * Math.PI / 180);
@@ -351,14 +416,27 @@
         c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = Math.round(Math.min(w, h) * .75) + 'px sans-serif'; c.fillText(item.text, 0, 0); c.restore();
       }
     }
-    c.drawImage(canvas, 0, 0);
+    if (page.drawing) c.drawImage(page.drawing, 0, 0);
     return out;
   }
-  function blobFromCanvas(c) { return new Promise(resolve => c.toBlob(resolve, 'image/png')); }
+  async function snapshot() {
+    saveActivePage();
+    await document.fonts.ready;
+    if (state.pages.length === 1) return snapshotPage(state.pages[0]);
+    const gap = 24;
+    const out = document.createElement('canvas'); out.width = W; out.height = state.pages.length * H + (state.pages.length - 1) * gap;
+    const c = out.getContext('2d');
+    c.fillStyle = '#e1ebe3'; c.fillRect(0, 0, out.width, out.height);
+    for (let index = 0; index < state.pages.length; index++) {
+      c.drawImage(await snapshotPage(state.pages[index]), 0, index * (H + gap));
+    }
+    return out;
+  }
+  function blobFromCanvas(c, type = 'image/png', quality) { return new Promise(resolve => c.toBlob(resolve, type, quality)); }
   $('download').addEventListener('click', async () => {
     try {
       const c = await snapshot(), blob = await blobFromCanvas(c), url = URL.createObjectURL(blob), a = document.createElement('a');
-      a.href = url; a.download = '我的聖誕許願卡.png'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+      a.href = url; a.download = state.pages.length === 1 ? '我的聖誕許願卡.png' : '我的聖誕許願卡-共' + state.pages.length + '頁.png'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch { toast('下載失敗，請再試一次'); }
   });
   function resetSend() {
@@ -370,18 +448,29 @@
   $('send').addEventListener('click', async () => {
     if (state.busy) return;
     if (!$('email').reportValidity()) return;
-    const text = state.items.filter(i => i.type === 'text').map(i => i.text.trim()).join('\n').trim();
-    if (!text || text === initialText || text === '在這裡寫下你的心願…') { toast('先寫下你的願望，再寄出去喔！'); setTool('select'); return; }
+    saveActivePage();
+    const text = state.pages.map((page, index) => {
+      const lines = page.items.filter(item => item.type === 'text').map(item => item.text.trim()).filter(value => value && value !== initialText && value !== '在這裡寫下你的心願…');
+      return lines.length ? '第 ' + (index + 1) + ' 頁：\n' + lines.join('\n') : '';
+    }).filter(Boolean).join('\n\n');
+    if (!text) { toast('先寫下你的願望，再寄出去喔！'); setTool('select'); return; }
     state.busy = true; $('send').disabled = true; $('send').textContent = '✉　正在寄送…';
     try {
-      const c = await snapshot(), blob = await blobFromCanvas(c);
-      if (!blob || blob.size > 4 * 1024 * 1024) throw new Error('卡片圖片太大，請換較小的照片');
+      const c = await snapshot();
+      let blob = await blobFromCanvas(c);
+      if (!blob || blob.size > 4 * 1024 * 1024) {
+        for (const quality of [.88, .75, .62]) {
+          blob = await blobFromCanvas(c, 'image/jpeg', quality);
+          if (blob && blob.size <= 4 * 1024 * 1024) break;
+        }
+      }
+      if (!blob || blob.size > 4 * 1024 * 1024) throw new Error('卡片圖片太大，請減少照片或頁數');
       const transfer = new DataTransfer();
-      transfer.items.add(new File([blob], 'santa-card.png', { type: 'image/png' }));
+      transfer.items.add(new File([blob], blob.type === 'image/jpeg' ? 'santa-card.jpg' : 'santa-card.png', { type: blob.type }));
       $('mail-attachment').files = transfer.files;
       $('mail-name').value = $('sender').value.trim().slice(0, 40) || '匿名許願人';
       $('mail-email').value = $('email').value.trim();
-      $('mail-message').value = text.slice(0, 2000);
+      $('mail-message').value = text.slice(0, 5000);
       $('mail-next').value = new URL('./thanks.html', location.href).href;
       $('mail-url').value = location.href.split('#')[0];
       $('mail-form').submit();
@@ -390,4 +479,5 @@
   });
   addItem({ type: 'text', x: 12, y: 29, w: 57, h: 32, text: initialText });
   state.selected = null; renderItems();
+  renderPageNavigation();
 })();
