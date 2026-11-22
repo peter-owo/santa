@@ -2,6 +2,8 @@
 
 這一份是可直接上傳到 GitHub Pages 的靜態網站。首頁、問答、文字、畫筆、橡皮擦、照片、角色貼紙、多頁卡片與下載功能都保留。寄送時會將所有頁面合成一張長圖附件，透過 FormSubmit 寄到 `peterchiu331hi@gmail.com`。附件通常是 PNG；圖片太大時會改用 JPEG。網站不儲存卡片，也沒有管理收件匣。
 
+選取卡片上的項目後，可以按 Delete 刪除、Ctrl+C 複製、Ctrl+X 剪下、Ctrl+V 貼上。Ctrl+Z 是上一步；Ctrl+Y 或 Ctrl+Shift+Z 是下一步。正在文字框內打字時，這些快捷鍵會維持一般文字編輯的用途。
+
 ## 上傳與啟用
 
 1. 在 GitHub 建立**公開** repository。GitHub Free 的 Pages 需要公開 repository。

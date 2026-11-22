@@ -72,3 +72,14 @@
 .add-page:hover::before,.add-page:hover::after{border-color:#d34f41}
 .add-page-plus{width:30px;height:30px;border-radius:50%;background:#e9f3e9;border:2px solid #a8c9b0;display:grid;place-items:center;font-size:22px;line-height:1}
 .add-page:hover .add-page-plus{background:#fff0e8;border-color:#d34f41}
+
+.quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-bottom:18px;margin-bottom:21px;border-bottom:1px dashed #cbdcce}
+.quick-action{min-height:42px;padding:7px 5px;border:1px solid #d5e0d4;border-radius:11px;background:#fff;color:#31584a;font-size:13px;font-weight:900;white-space:nowrap}
+.quick-action:hover:not(:disabled){background:#eef5ed;border-color:#a7c6ad}
+.quick-action.danger{color:#b9453a}
+.quick-action:disabled{opacity:.42;cursor:not-allowed}
+.card-footer .send-button{margin-left:auto}
+.item-delete{position:absolute;left:50%;bottom:-43px;transform:translateX(-50%);display:none;z-index:8;min-width:58px;height:29px;padding:3px 10px;border:1px solid #d5564d;border-radius:9px;background:#fff;color:#b33c34;box-shadow:0 3px 10px #183e3540;font-size:13px;font-weight:900;white-space:nowrap;touch-action:none}
+.item.selected .item-delete{display:block}
+.item-delete:hover{background:#fff0e9}
+.item.delete-inside .item-delete{bottom:5px}

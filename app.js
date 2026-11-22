@@ -5,8 +5,8 @@
   const ctx = canvas.getContext('2d');
   const itemsEl = document.getElementById('items');
   const initialText = '親愛的聖誕老公公：\n今年我希望…';
-  const firstPage = { items: [], drawing: null, history: [] };
-  const state = { tool: 'select', color: '#d4483d', size: 8, pages: [firstPage], pageIndex: 0, items: firstPage.items, selected: null, history: firstPage.history, drawing: false, gesture: null, busy: false };
+  const firstPage = { items: [], drawing: null, hasDrawing: false };
+  const state = { tool: 'select', color: '#d4483d', size: 8, pages: [firstPage], pageIndex: 0, items: firstPage.items, selected: null, drawing: false, gesture: null, busy: false, initializing: true, undoStack: [], redoStack: [], lastEditKey: null, lastEditAt: 0, clipboard: null, pasteCount: 0 };
   const $ = id => document.getElementById(id);
   let toastTimer;
 
@@ -115,7 +115,8 @@
     document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === name));
     if (name !== 'select') { state.selected = null; updateSelection(); }
   }
-  function addItem(item) {
+  function addItem(item, saveUndo = true) {
+    if (saveUndo) recordEdit();
     item.id = crypto.randomUUID();
     if (item.type === 'text' && !item.fontSize) item.fontSize = 23;
     state.items.push(item);
@@ -131,6 +132,7 @@
   }
   card.closest('.card-panel').addEventListener('pointerdown', event => {
     if (state.tool !== 'select' || event.target.closest('.item, button, input, textarea, label')) return;
+    if (document.activeElement instanceof HTMLTextAreaElement) document.activeElement.blur();
     state.selected = null;
     updateSelection();
   });
@@ -144,6 +146,7 @@
       if (textarea) textarea.style.fontSize = (item.fontSize || 23) / 9 + 'cqw';
     }
     el.classList.toggle('rotate-below', item.y < 10);
+    el.classList.toggle('delete-inside', item.y < 10 || item.y + item.h > 91);
   }
   function renderItems() {
     itemsEl.textContent = '';
@@ -157,7 +160,7 @@
         ta.placeholder = '在這裡繼續寫下你的心願…';
         ta.maxLength = 1000;
         ta.setAttribute('aria-label', '卡片文字');
-        ta.addEventListener('input', () => { item.text = ta.value; });
+        ta.addEventListener('input', () => { if (item.text !== ta.value) recordEdit('text:' + item.id); item.text = ta.value; });
         ta.addEventListener('focus', () => { state.selected = item.id; updateSelection(); });
         el.appendChild(ta);
       } else if (item.type === 'photo' || item.type === 'image-sticker') {
@@ -190,6 +193,12 @@
       rotateHandle.setAttribute('aria-label', '拖曳旋轉');
       rotateHandle.addEventListener('pointerdown', event => startGesture(event, item, 'rotate'));
       el.appendChild(rotateHandle);
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button'; deleteButton.className = 'item-delete'; deleteButton.textContent = '刪除';
+      deleteButton.setAttribute('aria-label', '刪除選取項目');
+      deleteButton.addEventListener('pointerdown', event => event.stopPropagation());
+      deleteButton.addEventListener('click', event => { event.stopPropagation(); removeItem(item.id); });
+      el.appendChild(deleteButton);
       itemsEl.appendChild(el);
     });
     updateSelection();
@@ -197,7 +206,7 @@
   function saveActivePage() {
     const page = state.pages[state.pageIndex];
     page.items = state.items;
-    page.history = state.history;
+    if (!page.hasDrawing) { page.drawing = null; return; }
     if (!page.drawing) {
       page.drawing = document.createElement('canvas');
       page.drawing.width = W; page.drawing.height = H;
@@ -205,6 +214,64 @@
     const drawingContext = page.drawing.getContext('2d');
     drawingContext.clearRect(0, 0, W, H);
     drawingContext.drawImage(canvas, 0, 0);
+  }
+  function cloneDrawing(source) {
+    if (!source) return null;
+    const copy = document.createElement('canvas');
+    copy.width = W; copy.height = H;
+    copy.getContext('2d').drawImage(source, 0, 0);
+    return copy;
+  }
+  function captureEditorState() {
+    saveActivePage();
+    return {
+      pageIndex: state.pageIndex,
+      selected: state.selected,
+      pages: state.pages.map(page => ({ items: page.items.map(item => ({ ...item })), drawing: cloneDrawing(page.drawing), hasDrawing: page.hasDrawing }))
+    };
+  }
+  function updateHistoryButtons() {
+    $('undo').disabled = state.undoStack.length === 0;
+    $('redo').disabled = state.redoStack.length === 0;
+  }
+  function recordEdit(key = null) {
+    if (state.initializing) return;
+    const now = Date.now();
+    if (key && key === state.lastEditKey && now - state.lastEditAt < 700) {
+      state.lastEditAt = now;
+      return;
+    }
+    state.undoStack.push(captureEditorState());
+    if (state.undoStack.length > 25) state.undoStack.shift();
+    state.redoStack = [];
+    state.lastEditKey = key;
+    state.lastEditAt = now;
+    updateHistoryButtons();
+  }
+  function restoreEditorState(snapshot) {
+    state.pages = snapshot.pages.map(page => ({ items: page.items.map(item => ({ ...item })), drawing: cloneDrawing(page.drawing), hasDrawing: page.hasDrawing }));
+    state.pageIndex = snapshot.pageIndex;
+    state.items = state.pages[state.pageIndex].items;
+    state.selected = snapshot.selected;
+    state.gesture = null;
+    state.drawing = false;
+    ctx.clearRect(0, 0, W, H);
+    if (state.pages[state.pageIndex].drawing) ctx.drawImage(state.pages[state.pageIndex].drawing, 0, 0);
+    setTool('select');
+    renderItems();
+    renderPageStack();
+    state.lastEditKey = null;
+    updateHistoryButtons();
+  }
+  function undoEdit() {
+    if (!state.undoStack.length) return;
+    state.redoStack.push(captureEditorState());
+    restoreEditorState(state.undoStack.pop());
+  }
+  function redoEdit() {
+    if (!state.redoStack.length) return;
+    state.undoStack.push(captureEditorState());
+    restoreEditorState(state.redoStack.pop());
   }
   function renderPageStack() {
     const stack = $('page-stack');
@@ -254,7 +321,6 @@
     if (saveCurrent) saveActivePage();
     state.pageIndex = index;
     state.items = state.pages[index].items;
-    state.history = state.pages[index].history;
     state.selected = null;
     state.gesture = null;
     state.drawing = false;
@@ -265,14 +331,15 @@
     renderPageStack();
   }
   $('add-page').addEventListener('click', () => {
-    state.pages.push({ items: [], drawing: null, history: [] });
+    recordEdit();
+    state.pages.push({ items: [], drawing: null, hasDrawing: false });
     showPage(state.pages.length - 1);
-    const item = addItem({ type: 'text', x: 12, y: 29, w: 57, h: 32, text: '' });
+    addItem({ type: 'text', x: 12, y: 29, w: 57, h: 32, text: '' }, false);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => itemsEl.querySelector('[data-id="' + item.id + '"] textarea')?.focus(), 100);
   });
   $('remove-page').addEventListener('click', () => {
     if (state.pages.length === 1 || !window.confirm('確定刪除第 ' + (state.pageIndex + 1) + ' 頁嗎？')) return;
+    recordEdit();
     const next = Math.min(state.pageIndex, state.pages.length - 2);
     state.pages.splice(state.pageIndex, 1);
     showPage(next, false);
@@ -280,6 +347,7 @@
   function startGesture(event, item, kind, sx = 0, sy = 0) {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault(); event.stopPropagation();
+    if (document.activeElement instanceof HTMLTextAreaElement) document.activeElement.blur();
     state.selected = item.id; updateSelection();
     const rect = card.getBoundingClientRect();
     const centerX = rect.left + (item.x + item.w / 2) / 100 * rect.width;
@@ -288,7 +356,7 @@
       id: item.id, kind, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
       x: item.x, y: item.y, w: item.w, h: item.h, fontSize: item.fontSize || 23, rotate: item.rotate || 0,
       rect, centerX, centerY, widthPx: item.w / 100 * rect.width, heightPx: item.h / 100 * rect.height,
-      sx, sy, pointerAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX)
+      sx, sy, pointerAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX), changed: false
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -297,6 +365,11 @@
     if (!m || event.pointerId !== m.pointerId) return;
     const item = itemById(m.id);
     if (!item) return;
+    if (!m.changed) {
+      if (Math.hypot(event.clientX - m.startX, event.clientY - m.startY) < 2) return;
+      recordEdit();
+      m.changed = true;
+    }
     if (m.kind === 'move') {
       item.x = Math.max(0, Math.min(100 - item.w, m.x + (event.clientX - m.startX) / m.rect.width * 100));
       item.y = Math.max(0, Math.min(100 - item.h, m.y + (event.clientY - m.startY) / m.rect.height * 100));
@@ -335,8 +408,8 @@
   canvas.addEventListener('pointerdown', event => {
     if (state.tool !== 'pen' && state.tool !== 'eraser') return;
     event.preventDefault();
-    state.history.push(ctx.getImageData(0, 0, W, H));
-    if (state.history.length > 12) state.history.shift();
+    recordEdit();
+    state.pages[state.pageIndex].hasDrawing = true;
     state.drawing = true;
     canvas.setPointerCapture(event.pointerId);
     const p = point(event);
@@ -402,8 +475,44 @@
       addItem({ type: 'image-sticker', x: 35 + count % 4 * 7, y: 38 + count % 3 * 5, w, h, src, rotate: count % 2 ? 5 : -5 });
     } catch { toast('貼紙載入失敗，請重新整理後再試一次'); }
   }));
-  $('undo').addEventListener('click', () => { const snap = state.history.pop(); if (snap) ctx.putImageData(snap, 0, 0); else toast('目前沒有可以復原的筆畫'); });
-  $('remove-item').addEventListener('click', () => { if (!state.selected) return; const index = state.items.findIndex(i => i.id === state.selected); if (index !== -1) state.items.splice(index, 1); state.selected = null; renderItems(); });
+  function removeItem(id = state.selected) {
+    const index = state.items.findIndex(item => item.id === id);
+    if (index === -1) return;
+    recordEdit();
+    state.items.splice(index, 1);
+    state.selected = null;
+    renderItems();
+  }
+  function copySelectedItem() {
+    const item = itemById(state.selected);
+    if (!item) return false;
+    state.clipboard = { ...item };
+    delete state.clipboard.id;
+    state.pasteCount = 0;
+    return true;
+  }
+  function pasteCopiedItem() {
+    if (!state.clipboard) return;
+    const item = { ...state.clipboard };
+    const offset = 5 * (++state.pasteCount);
+    item.x = Math.max(0, Math.min(100 - item.w, item.x + offset));
+    item.y = Math.max(0, Math.min(100 - item.h, item.y + offset));
+    addItem(item);
+  }
+  $('undo').addEventListener('click', undoEdit);
+  $('redo').addEventListener('click', redoEdit);
+  $('remove-item').addEventListener('click', () => removeItem());
+  window.addEventListener('keydown', event => {
+    if (state.gesture || state.drawing || event.defaultPrevented || event.target instanceof Element && event.target.closest('input, textarea, [contenteditable="true"]')) return;
+    const key = event.key.toLowerCase();
+    const command = event.ctrlKey || event.metaKey;
+    if (command && key === 'z') { event.preventDefault(); event.shiftKey ? redoEdit() : undoEdit(); }
+    else if (command && key === 'y') { event.preventDefault(); redoEdit(); }
+    else if (command && key === 'c' && copySelectedItem()) { event.preventDefault(); toast('已複製選取項目'); }
+    else if (command && key === 'x' && copySelectedItem()) { event.preventDefault(); removeItem(); toast('已剪下選取項目'); }
+    else if (command && key === 'v' && state.clipboard) { event.preventDefault(); pasteCopiedItem(); }
+    else if (!command && key === 'delete' && state.selected) { event.preventDefault(); removeItem(); }
+  });
 
   function wrapText(c, text, width) {
     const rows = [];
@@ -514,4 +623,6 @@
   addItem({ type: 'text', x: 12, y: 29, w: 57, h: 32, text: initialText });
   state.selected = null; renderItems();
   renderPageStack();
+  state.initializing = false;
+  updateHistoryButtons();
 })();

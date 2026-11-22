@@ -38,6 +38,12 @@
     <div class="section-heading"><div><button type="button" class="editor-back" id="editor-home">⌂　回首頁</button><br><span class="section-kicker">Santa's little workshop</span><h2>好好許願啊 不然聖誕老公公看不清楚就不送了</h2></div><p>每一筆、每一字，全看聖誕老公公心情</p></div>
     <div class="editor-grid">
       <aside class="tools" aria-label="卡片工具">
+        <div class="quick-actions" aria-label="編輯操作">
+          <button type="button" class="quick-action" id="undo" title="Ctrl+Z" disabled>↶ 上一步</button>
+          <button type="button" class="quick-action" id="redo" title="Ctrl+Y" disabled>↷ 下一步</button>
+          <button type="button" class="quick-action danger" id="remove-item" title="Delete" disabled>▤ 刪除</button>
+          <button type="button" class="quick-action" id="download">⬇ 下載</button>
+        </div>
         <h3 class="tool-title"><span>🎨</span> 創作工具</h3>
         <div class="tool-buttons">
           <button type="button" class="tool-button active" data-tool="select"><b>☝</b>移動／編輯</button>
@@ -84,7 +90,7 @@
         <div class="panel-top"><div><strong>你的聖誕卡片</strong><br><small>文字左上紅點可移動，另外三角可縮放；圖片與貼紙可拉四角縮放。拖上方圓點可旋轉。</small></div><span class="status">創作中</span></div>
         <div class="page-stack" id="page-stack"><section class="page-section"><div class="page-heading"><strong>第 1 頁</strong><button type="button" class="remove-page" id="remove-page" hidden>刪除這頁</button></div><div class="card-outer" id="card-outer"><div class="card" id="card"><div class="card-head">Dear Santa,</div><div class="card-sub">MY CHRISTMAS WISH</div><div class="stamp">★</div><div class="items" id="items"></div><canvas class="canvas" id="drawing" width="900" height="600" aria-label="卡片畫布"></canvas></div></div></section></div>
         <button type="button" class="add-page" id="add-page"><span class="add-page-plus">＋</span><span id="add-page-label">新增第二頁</span></button>
-        <div class="card-footer"><div class="footer-actions"><button type="button" class="light-button" id="undo">↶ 上一步畫筆</button><button type="button" class="light-button danger" id="remove-item">刪除選取項目</button><button type="button" class="light-button" id="download">下載卡片</button></div><button type="button" class="send-button" id="send">✉　寄給聖誕老公公</button></div>
+        <div class="card-footer"><button type="button" class="send-button" id="send">✉　寄給聖誕老公公</button></div>
       </div>
     </div>
     <p class="footnote">卡片寄出後不會保存在網站。建議先下載留念；如果沒收到郵件，請檢查垃圾郵件。</p>
