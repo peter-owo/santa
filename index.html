@@ -81,9 +81,8 @@
         <p class="hint">Email 與卡片圖片會寄到聖誕老公公的信箱，不會公開展示。</p>
       </aside>
       <div class="card-panel">
-        <div class="panel-top"><div><strong>你的聖誕卡片</strong><br><small>點文字可修改、拖紅色圓點移動；文字、圖片和貼紙都能拉四角縮放、拖上方圓點旋轉。</small></div><span class="status">創作中</span></div>
-        <div class="card-outer"><div class="card" id="card"><div class="card-head">Dear Santa,</div><div class="card-sub">MY CHRISTMAS WISH</div><div class="stamp">★</div><div class="items" id="items"></div><canvas class="canvas" id="drawing" width="900" height="600" aria-label="卡片畫布"></canvas></div></div>
-        <div class="page-navigation"><div class="page-list" id="page-list" aria-label="卡片頁面"></div><button type="button" class="remove-page" id="remove-page" hidden>刪除目前頁面</button></div>
+        <div class="panel-top"><div><strong>你的聖誕卡片</strong><br><small>文字左上紅點可移動，另外三角可縮放；圖片與貼紙可拉四角縮放。拖上方圓點可旋轉。</small></div><span class="status">創作中</span></div>
+        <div class="page-stack" id="page-stack"><section class="page-section"><div class="page-heading"><strong>第 1 頁</strong><button type="button" class="remove-page" id="remove-page" hidden>刪除這頁</button></div><div class="card-outer" id="card-outer"><div class="card" id="card"><div class="card-head">Dear Santa,</div><div class="card-sub">MY CHRISTMAS WISH</div><div class="stamp">★</div><div class="items" id="items"></div><canvas class="canvas" id="drawing" width="900" height="600" aria-label="卡片畫布"></canvas></div></div></section></div>
         <button type="button" class="add-page" id="add-page"><span class="add-page-plus">＋</span><span id="add-page-label">新增第二頁</span></button>
         <div class="card-footer"><div class="footer-actions"><button type="button" class="light-button" id="undo">↶ 上一步畫筆</button><button type="button" class="light-button danger" id="remove-item">刪除選取項目</button><button type="button" class="light-button" id="download">下載卡片</button></div><button type="button" class="send-button" id="send">✉　寄給聖誕老公公</button></div>
       </div>

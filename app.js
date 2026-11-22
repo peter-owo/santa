@@ -173,6 +173,7 @@
         el.addEventListener('pointerdown', event => { if (state.tool === 'select') startGesture(event, item, 'move'); });
       }
       for (const [corner, sx, sy] of [['nw', -1, -1], ['ne', 1, -1], ['sw', -1, 1], ['se', 1, 1]]) {
+        if (item.type === 'text' && corner === 'nw') continue;
         const handle = document.createElement('button');
         handle.type = 'button'; handle.className = 'resize-handle ' + corner;
         handle.setAttribute('aria-label', '拖曳縮放');
@@ -200,19 +201,47 @@
     drawingContext.clearRect(0, 0, W, H);
     drawingContext.drawImage(canvas, 0, 0);
   }
-  function renderPageNavigation() {
-    const list = $('page-list');
-    list.textContent = '';
+  function renderPageStack() {
+    const stack = $('page-stack');
+    const activeCard = $('card-outer');
+    const removePage = $('remove-page');
+    stack.textContent = '';
     state.pages.forEach((page, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'page-button' + (index === state.pageIndex ? ' active' : '');
-      button.textContent = '第 ' + (index + 1) + ' 頁';
-      if (index === state.pageIndex) button.setAttribute('aria-current', 'page');
-      button.addEventListener('click', () => showPage(index));
-      list.appendChild(button);
+      const section = document.createElement('section');
+      section.className = 'page-section' + (index === state.pageIndex ? ' active' : '');
+      section.setAttribute('aria-label', '第 ' + (index + 1) + ' 頁');
+      const heading = document.createElement('div');
+      heading.className = 'page-heading';
+      const title = document.createElement('strong');
+      title.textContent = '第 ' + (index + 1) + ' 頁';
+      heading.appendChild(title);
+      if (index === state.pageIndex) {
+        removePage.hidden = state.pages.length === 1;
+        heading.appendChild(removePage);
+        section.append(heading, activeCard);
+      } else {
+        const frame = document.createElement('div');
+        frame.className = 'card-outer page-preview-frame';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'page-preview-button';
+        button.setAttribute('aria-label', '編輯第 ' + (index + 1) + ' 頁');
+        const preview = document.createElement('canvas');
+        preview.width = W; preview.height = H;
+        preview.className = 'page-preview-canvas';
+        button.appendChild(preview);
+        button.addEventListener('click', () => {
+          showPage(index);
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        frame.appendChild(button);
+        section.append(heading, frame);
+        snapshotPage(page).then(image => {
+          if (button.isConnected) preview.getContext('2d').drawImage(image, 0, 0);
+        }).catch(() => { if (button.isConnected) button.setAttribute('aria-label', '第 ' + (index + 1) + ' 頁預覽載入失敗，點擊編輯'); });
+      }
+      stack.appendChild(section);
     });
-    $('remove-page').hidden = state.pages.length === 1;
     $('add-page-label').textContent = state.pages.length === 1 ? '新增第二頁' : '新增下一頁';
   }
   function showPage(index, saveCurrent = true) {
@@ -228,7 +257,7 @@
     if (state.pages[index].drawing) ctx.drawImage(state.pages[index].drawing, 0, 0);
     setTool('select');
     renderItems();
-    renderPageNavigation();
+    renderPageStack();
   }
   $('add-page').addEventListener('click', () => {
     state.pages.push({ items: [], drawing: null, history: [] });
@@ -479,5 +508,5 @@
   });
   addItem({ type: 'text', x: 12, y: 29, w: 57, h: 32, text: initialText });
   state.selected = null; renderItems();
-  renderPageNavigation();
+  renderPageStack();
 })();
