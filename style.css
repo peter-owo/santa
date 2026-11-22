@@ -83,3 +83,7 @@
 .item.selected .item-delete{display:block}
 .item-delete:hover{background:#fff0e9}
 .item.delete-inside .item-delete{bottom:5px}
+
+.card.pick-color .canvas{pointer-events:auto;cursor:copy}
+.quiz-options{position:relative}
+.no-button.evading{position:absolute;z-index:3;margin:0;transition:left .2s cubic-bezier(.2,1.2,.3,1),top .2s cubic-bezier(.2,1.2,.3,1),background .18s,box-shadow .18s}

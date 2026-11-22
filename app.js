@@ -6,7 +6,7 @@
   const itemsEl = document.getElementById('items');
   const initialText = '親愛的聖誕老公公：\n今年我希望…';
   const firstPage = { items: [], drawing: null, hasDrawing: false };
-  const state = { tool: 'select', color: '#d4483d', size: 8, pages: [firstPage], pageIndex: 0, items: firstPage.items, selected: null, drawing: false, gesture: null, busy: false, initializing: true, undoStack: [], redoStack: [], lastEditKey: null, lastEditAt: 0, clipboard: null, pasteCount: 0 };
+  const state = { tool: 'select', color: '#d4483d', size: 8, pages: [firstPage], pageIndex: 0, items: firstPage.items, selected: null, drawing: false, sampling: false, gesture: null, busy: false, initializing: true, undoStack: [], redoStack: [], lastEditKey: null, lastEditAt: 0, clipboard: null, pasteCount: 0 };
   const $ = id => document.getElementById(id);
   let toastTimer;
 
@@ -17,15 +17,67 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
   }
-  const challenge = { question: 1, yesChecks: 0, noPresses: 0, afterConfirm: null };
+  const challenge = { question: 1, yesChecks: 0, noPresses: 0, evades: 0, lastEvade: -Infinity, afterConfirm: null };
   const yesAnswer = $('answer-yes'), noAnswer = $('answer-no');
+  const noZone = document.querySelector('.quiz-options');
+  let dodgeDisableTimer;
+  function resetNoDodge() {
+    clearTimeout(dodgeDisableTimer);
+    challenge.evades = 0;
+    challenge.lastEvade = -Infinity;
+    noAnswer.classList.remove('evading');
+    noAnswer.style.left = '';
+    noAnswer.style.top = '';
+  }
+  function armNoDodge() {
+    const zone = noZone.getBoundingClientRect();
+    const button = noAnswer.getBoundingClientRect();
+    noAnswer.style.left = button.left - zone.left + 'px';
+    noAnswer.style.top = button.top - zone.top + 'px';
+    noAnswer.classList.add('evading');
+  }
+  function dodgeNoAnswer(pointerX, pointerY) {
+    if (!noAnswer.classList.contains('evading') || noAnswer.disabled || challenge.evades >= 6) return;
+    const now = performance.now();
+    if (now - challenge.lastEvade < 180) return;
+    challenge.lastEvade = now;
+    const zone = noZone.getBoundingClientRect();
+    const width = noAnswer.offsetWidth, height = noAnswer.offsetHeight;
+    const maxX = Math.max(0, zone.width - width), maxY = Math.max(0, zone.height - height);
+    const oldX = parseFloat(noAnswer.style.left), oldY = parseFloat(noAnswer.style.top);
+    let best = { x: oldX, y: oldY, score: -Infinity };
+    for (let i = 0; i < 20; i++) {
+      const x = (i % 4 === 0 ? (i % 8 === 0 ? 0 : 1) : Math.random()) * maxX;
+      const y = (i % 4 === 0 ? (i % 8 === 0 ? 0 : 1) : Math.random()) * maxY;
+      const away = Math.hypot(zone.left + x + width / 2 - pointerX, zone.top + y + height / 2 - pointerY);
+      const moved = Math.hypot(x - oldX, y - oldY);
+      const score = away + Math.min(moved, 180) * .7;
+      if (score > best.score) best = { x, y, score };
+    }
+    noAnswer.style.left = Math.round(best.x) + 'px';
+    noAnswer.style.top = Math.round(best.y) + 'px';
+    challenge.evades += 1;
+    if (challenge.evades === 6) dodgeDisableTimer = setTimeout(() => {
+      noAnswer.disabled = true;
+      yesAnswer.focus();
+    }, 300);
+  }
+  window.addEventListener('pointermove', event => {
+    if (event.pointerType !== 'mouse' || $('quiz-screen').hidden || challenge.question !== 2 || challenge.noPresses < 5 || challenge.evades >= 6) return;
+    const rect = noAnswer.getBoundingClientRect();
+    const dx = Math.max(rect.left - event.clientX, 0, event.clientX - rect.right);
+    const dy = Math.max(rect.top - event.clientY, 0, event.clientY - rect.bottom);
+    if (Math.hypot(dx, dy) < 70) dodgeNoAnswer(event.clientX, event.clientY);
+  });
   function showScreen(name) {
+    if (name !== 'quiz') resetNoDodge();
     $('home-screen').hidden = name !== 'home';
     $('quiz-screen').hidden = name !== 'quiz';
     $('make-card').hidden = name !== 'editor';
     window.scrollTo(0, 0);
   }
   function showQuestion(number) {
+    resetNoDodge();
     challenge.question = number;
     $('quiz-screen').classList.toggle('question-two', number === 2);
     $('quiz-kicker').textContent = number === 1 ? '第一題' : '第二題';
@@ -83,7 +135,7 @@
     else if (challenge.yesChecks === 2) openChallenge('sleep');
     else { showQuestion(2); $('quiz-question').focus(); }
   });
-  noAnswer.addEventListener('click', () => {
+  noAnswer.addEventListener('click', event => {
     if (challenge.question === 1) { openChallenge('bad'); return; }
     challenge.noPresses += 1;
     if (challenge.noPresses <= 5) {
@@ -98,10 +150,8 @@
         { transform: 'scale(' + (next + .18) + ') rotate(' + (nextAngle * 1.25) + 'deg)' },
         { transform: 'scale(' + next + ') rotate(' + nextAngle + 'deg)' },
       ], { duration: 520, easing: 'cubic-bezier(.2,1.4,.3,1)' });
-    } else {
-      noAnswer.disabled = true;
-      yesAnswer.focus();
-    }
+      if (challenge.noPresses === 5) armNoDodge();
+    } else dodgeNoAnswer(event.clientX, event.clientY);
   });
   $('challenge-confirm').addEventListener('click', () => {
     $('challenge-modal').hidden = true;
@@ -112,6 +162,7 @@
   function setTool(name) {
     state.tool = name;
     card.classList.toggle('draw', name === 'pen' || name === 'eraser');
+    card.classList.toggle('pick-color', name === 'eyedropper');
     document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === name));
     if (name !== 'select') { state.selected = null; updateSelection(); }
   }
@@ -407,6 +458,28 @@
     return { x: (event.clientX - rect.left) * W / rect.width, y: (event.clientY - rect.top) * H / rect.height };
   }
   canvas.addEventListener('pointerdown', event => {
+    if (state.tool === 'eyedropper') {
+      event.preventDefault();
+      if (state.sampling) return;
+      state.sampling = true;
+      const p = point(event);
+      saveActivePage();
+      snapshotPage(state.pages[state.pageIndex]).then(preview => {
+        const pixel = preview.getContext('2d').getImageData(
+          Math.max(0, Math.min(W - 1, Math.floor(p.x))), Math.max(0, Math.min(H - 1, Math.floor(p.y))), 1, 1
+        ).data;
+        const color = '#' + Array.from(pixel.slice(0, 3), value => value.toString(16).padStart(2, '0')).join('');
+        const swatch = $('sampled-color');
+        swatch.dataset.color = color;
+        swatch.style.setProperty('--c', color);
+        swatch.hidden = false;
+        state.color = color;
+        document.querySelectorAll('[data-color]').forEach(button => button.classList.toggle('active', button === swatch));
+        setTool('pen');
+        toast('已取色，可以開始畫畫');
+      }).catch(() => toast('無法取得這裡的顏色，請再試一次')).finally(() => { state.sampling = false; });
+      return;
+    }
     if (state.tool !== 'pen' && state.tool !== 'eraser') return;
     event.preventDefault();
     recordEdit();

@@ -48,6 +48,7 @@
         <div class="tool-buttons">
           <button type="button" class="tool-button active" data-tool="select"><b>☝</b>移動／編輯</button>
           <button type="button" class="tool-button" data-tool="pen"><b>✎</b>畫筆</button>
+          <button type="button" class="tool-button" data-tool="eyedropper"><b>◉</b>滴管取色</button>
           <button type="button" class="tool-button" data-tool="eraser"><b>◩</b>橡皮擦</button>
           <button type="button" class="tool-button" id="add-text"><b>Ｔ</b>加文字</button>
           <button type="button" class="tool-button wide" id="add-photo"><b>▧</b>上傳照片</button>
@@ -71,10 +72,11 @@
           <button type="button" class="swatch" style="--c:#344f87" data-color="#344f87" aria-label="深藍色"></button>
           <button type="button" class="swatch" style="--c:#8f644e" data-color="#8f644e" aria-label="棕色"></button>
           <button type="button" class="swatch" style="--c:#303739" data-color="#303739" aria-label="黑色"></button>
+          <button type="button" class="swatch" id="sampled-color" style="--c:#d4483d" data-color="#d4483d" aria-label="滴管選取的顏色" title="滴管選取的顏色" hidden></button>
         </div>
         <label class="range-label" for="brush-size">筆畫粗細 <b id="brush-value">8 px</b></label>
         <input class="range" id="brush-size" type="range" min="2" max="40" value="8">
-        <p class="hint">選擇畫筆或橡皮擦，就可以直接在卡片上畫畫。</p>
+        <p class="hint">點滴管後再點卡片取色；選畫筆或橡皮擦可直接在卡片上畫畫。</p>
         <hr class="divider">
         <h3 class="tool-title"><span>⭐</span> 聖誕小貼紙</h3>
         <div class="tool-buttons"><button type="button" class="tool-button" data-sticker="⭐"><b>⭐</b>星星</button><button type="button" class="tool-button" data-sticker="🎄"><b>🎄</b>聖誕樹</button><button type="button" class="tool-button" data-sticker="🎁"><b>🎁</b>禮物</button><button type="button" class="tool-button" data-sticker="❄️"><b>❄️</b>雪花</button></div>
