@@ -130,12 +130,13 @@
     itemsEl.querySelectorAll('.item').forEach(el => el.classList.toggle('selected', el.dataset.id === state.selected));
     $('remove-item').disabled = !state.selected;
   }
-  card.closest('.card-panel').addEventListener('pointerdown', event => {
-    if (state.tool !== 'select' || event.target.closest('.item, button, input, textarea, label')) return;
+  document.addEventListener('pointerdown', event => {
+    if (state.tool !== 'select' || !state.selected || !(event.target instanceof Element)) return;
+    if (event.target.closest('.item, #remove-item, #undo, #redo, #download')) return;
     if (document.activeElement instanceof HTMLTextAreaElement) document.activeElement.blur();
     state.selected = null;
     updateSelection();
-  });
+  }, true);
   function applyItemStyle(el, item) {
     el.style.left = item.x + '%'; el.style.top = item.y + '%';
     el.style.width = item.w + '%'; el.style.height = item.h + '%';
