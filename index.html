@@ -59,7 +59,6 @@
         <label class="range-label" for="brush-size">筆畫粗細 <b id="brush-value">8 px</b></label>
         <input class="range" id="brush-size" type="range" min="2" max="40" value="8">
         <p class="hint">選擇畫筆或橡皮擦，就可以直接在卡片上畫畫。</p>
-        <div id="size-control" hidden><label class="range-label" for="item-size">選取項目大小</label><input class="range" id="item-size" type="range" min="6" max="70" value="30"></div>
         <hr class="divider">
         <h3 class="tool-title"><span>⭐</span> 聖誕小貼紙</h3>
         <div class="tool-buttons"><button type="button" class="tool-button" data-sticker="⭐"><b>⭐</b>星星</button><button type="button" class="tool-button" data-sticker="🎄"><b>🎄</b>聖誕樹</button><button type="button" class="tool-button" data-sticker="🎁"><b>🎁</b>禮物</button><button type="button" class="tool-button" data-sticker="❄️"><b>❄️</b>雪花</button></div>
@@ -82,7 +81,7 @@
         <p class="hint">Email 與卡片圖片會寄到聖誕老公公的信箱，不會公開展示。</p>
       </aside>
       <div class="card-panel">
-        <div class="panel-top"><div><strong>你的聖誕卡片</strong><br><small>點文字可修改，拖動紅色圓點可移動。可以增加圖讓聖誕老公公知道要買甚麼。</small></div><span class="status">創作中</span></div>
+        <div class="panel-top"><div><strong>你的聖誕卡片</strong><br><small>點文字可修改、拖紅色圓點移動。圖片與貼紙可直接拖曳，拉四角縮放，拖上方圓點旋轉。</small></div><span class="status">創作中</span></div>
         <div class="card-outer"><div class="card" id="card"><div class="card-head">Dear Santa,</div><div class="card-sub">MY CHRISTMAS WISH</div><div class="stamp">★</div><div class="items" id="items"></div><canvas class="canvas" id="drawing" width="900" height="600" aria-label="卡片畫布"></canvas></div></div>
         <div class="card-footer"><div class="footer-actions"><button type="button" class="light-button" id="undo">↶ 上一步畫筆</button><button type="button" class="light-button danger" id="remove-item">刪除選取項目</button><button type="button" class="light-button" id="download">下載卡片</button></div><button type="button" class="send-button" id="send">✉　寄給聖誕老公公</button></div>
       </div>

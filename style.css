@@ -38,3 +38,17 @@
 .image-sticker-button img{display:block;width:100%;height:71px;object-fit:contain;pointer-events:none}
 .item.image-sticker{transform:rotate(var(--rotate,0deg));user-select:none;cursor:grab}
 .item.image-sticker img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.item:not(.text){cursor:grab;touch-action:none}
+.item:not(.text):active{cursor:grabbing}
+.resize-handle,.rotate-handle{position:absolute;z-index:5;display:none;place-items:center;padding:0;touch-action:none;user-select:none}
+.item.selected .resize-handle,.item.selected .rotate-handle{display:grid}
+.resize-handle{width:26px;height:26px;border:0;background:transparent}
+.resize-handle::after{content:'';width:12px;height:12px;border:2px solid #cc4f43;border-radius:3px;background:#fff;box-shadow:0 1px 5px #163d3570}
+.resize-handle.nw{left:-13px;top:-13px;cursor:nwse-resize}
+.resize-handle.ne{right:-13px;top:-13px;cursor:nesw-resize}
+.resize-handle.sw{left:-13px;bottom:-13px;cursor:nesw-resize}
+.resize-handle.se{right:-13px;bottom:-13px;cursor:nwse-resize}
+.rotate-handle{left:50%;top:-42px;transform:translateX(-50%);width:29px;height:29px;border:2px solid #cc4f43;border-radius:50%;background:#fff;color:#a83731;font:700 22px/1 sans-serif;box-shadow:0 2px 7px #163d354f;cursor:grab}
+.rotate-handle::after{content:'';position:absolute;top:100%;left:50%;width:2px;height:12px;background:#cc4f43;transform:translateX(-50%);pointer-events:none}
+.item.rotate-below .rotate-handle{top:auto;bottom:-42px}
+.item.rotate-below .rotate-handle::after{top:auto;bottom:100%}

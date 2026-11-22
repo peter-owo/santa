@@ -5,7 +5,7 @@
   const ctx = canvas.getContext('2d');
   const itemsEl = document.getElementById('items');
   const initialText = '親愛的聖誕老公公：\n今年我希望…';
-  const state = { tool: 'select', color: '#d4483d', size: 8, items: [], selected: null, history: [], drawing: false, moving: null, busy: false };
+  const state = { tool: 'select', color: '#d4483d', size: 8, items: [], selected: null, history: [], drawing: false, gesture: null, busy: false };
   const $ = id => document.getElementById(id);
   let toastTimer;
 
@@ -126,18 +126,20 @@
   function updateSelection() {
     itemsEl.querySelectorAll('.item').forEach(el => el.classList.toggle('selected', el.dataset.id === state.selected));
     $('remove-item').disabled = !state.selected;
-    const selected = itemById(state.selected);
-    $('size-control').hidden = !selected || selected.type === 'text';
-    if (selected && selected.type !== 'text') $('item-size').value = selected.w;
+  }
+  function applyItemStyle(el, item) {
+    el.style.left = item.x + '%'; el.style.top = item.y + '%';
+    el.style.width = item.w + '%'; el.style.height = item.h + '%';
+    el.style.setProperty('--rotate', (item.rotate || 0) + 'deg');
+    if (item.type === 'sticker') el.style.fontSize = item.w * .75 + 'cqw';
+    el.classList.toggle('rotate-below', item.y < 10);
   }
   function renderItems() {
     itemsEl.textContent = '';
     state.items.forEach(item => {
       const el = document.createElement('div');
       el.className = 'item ' + item.type;
-      el.style.left = item.x + '%'; el.style.top = item.y + '%';
-      el.style.width = item.w + '%'; el.style.height = item.h + '%';
-      el.style.setProperty('--rotate', (item.rotate || 0) + 'deg');
+      applyItemStyle(el, item);
       el.dataset.id = item.id;
       if (item.type === 'text') {
         const ta = document.createElement('textarea');
@@ -153,33 +155,81 @@
       } else {
         el.textContent = item.text;
       }
-      const handle = document.createElement('button');
-      handle.type = 'button'; handle.className = 'drag-handle'; handle.textContent = '✥';
-      handle.setAttribute('aria-label', '拖動項目');
-      handle.addEventListener('pointerdown', event => startMove(event, item));
-      el.appendChild(handle);
-      el.addEventListener('pointerdown', () => { if (state.tool === 'select') { state.selected = item.id; updateSelection(); } });
+      if (item.type === 'text') {
+        const handle = document.createElement('button');
+        handle.type = 'button'; handle.className = 'drag-handle'; handle.textContent = '✥';
+        handle.setAttribute('aria-label', '拖動文字');
+        handle.addEventListener('pointerdown', event => startGesture(event, item, 'move'));
+        el.appendChild(handle);
+        el.addEventListener('pointerdown', () => { if (state.tool === 'select') { state.selected = item.id; updateSelection(); } });
+      } else {
+        for (const [corner, sx, sy] of [['nw', -1, -1], ['ne', 1, -1], ['sw', -1, 1], ['se', 1, 1]]) {
+          const handle = document.createElement('button');
+          handle.type = 'button'; handle.className = 'resize-handle ' + corner;
+          handle.setAttribute('aria-label', '拖曳縮放');
+          handle.addEventListener('pointerdown', event => startGesture(event, item, 'resize', sx, sy));
+          el.appendChild(handle);
+        }
+        const rotateHandle = document.createElement('button');
+        rotateHandle.type = 'button'; rotateHandle.className = 'rotate-handle'; rotateHandle.textContent = '↻';
+        rotateHandle.setAttribute('aria-label', '拖曳旋轉');
+        rotateHandle.addEventListener('pointerdown', event => startGesture(event, item, 'rotate'));
+        el.appendChild(rotateHandle);
+        el.addEventListener('pointerdown', event => { if (state.tool === 'select') startGesture(event, item, 'move'); });
+      }
       itemsEl.appendChild(el);
     });
     updateSelection();
   }
-  function startMove(event, item) {
+  function startGesture(event, item, kind, sx = 0, sy = 0) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault(); event.stopPropagation();
     state.selected = item.id; updateSelection();
     const rect = card.getBoundingClientRect();
-    state.moving = { id: item.id, startX: event.clientX, startY: event.clientY, x: item.x, y: item.y, width: rect.width, height: rect.height };
+    const centerX = rect.left + (item.x + item.w / 2) / 100 * rect.width;
+    const centerY = rect.top + (item.y + item.h / 2) / 100 * rect.height;
+    state.gesture = {
+      id: item.id, kind, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
+      x: item.x, y: item.y, w: item.w, h: item.h, rotate: item.rotate || 0,
+      rect, centerX, centerY, widthPx: item.w / 100 * rect.width, heightPx: item.h / 100 * rect.height,
+      sx, sy, pointerAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX)
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
   window.addEventListener('pointermove', event => {
-    if (!state.moving) return;
-    const m = state.moving, item = itemById(m.id);
+    const m = state.gesture;
+    if (!m || event.pointerId !== m.pointerId) return;
+    const item = itemById(m.id);
     if (!item) return;
-    item.x = Math.max(0, Math.min(100 - item.w, m.x + (event.clientX - m.startX) / m.width * 100));
-    item.y = Math.max(0, Math.min(100 - item.h, m.y + (event.clientY - m.startY) / m.height * 100));
+    if (m.kind === 'move') {
+      item.x = Math.max(0, Math.min(100 - item.w, m.x + (event.clientX - m.startX) / m.rect.width * 100));
+      item.y = Math.max(0, Math.min(100 - item.h, m.y + (event.clientY - m.startY) / m.rect.height * 100));
+    } else if (m.kind === 'rotate') {
+      const angle = Math.atan2(event.clientY - m.centerY, event.clientX - m.centerX) - m.pointerAngle;
+      const degrees = m.rotate + angle * 180 / Math.PI;
+      item.rotate = event.shiftKey ? Math.round(degrees / 15) * 15 : Math.round(degrees * 10) / 10;
+    } else {
+      const radians = m.rotate * Math.PI / 180, cos = Math.cos(radians), sin = Math.sin(radians);
+      const dx = event.clientX - m.startX, dy = event.clientY - m.startY;
+      const localX = dx * cos + dy * sin, localY = -dx * sin + dy * cos;
+      const projected = (m.sx * localX * m.widthPx + m.sy * localY * m.heightPx) / (m.widthPx ** 2 + m.heightPx ** 2);
+      const minScale = Math.max(.15, 28 / m.widthPx, 28 / m.heightPx);
+      const maxScale = Math.min(80 / m.w, 80 / m.h);
+      const scale = Math.max(minScale, Math.min(maxScale, 1 + projected));
+      item.w = m.w * scale; item.h = m.h * scale;
+      const localShiftX = m.sx * (item.w - m.w) / 200 * m.rect.width;
+      const localShiftY = m.sy * (item.h - m.h) / 200 * m.rect.height;
+      const centerX = m.centerX + localShiftX * cos - localShiftY * sin;
+      const centerY = m.centerY + localShiftX * sin + localShiftY * cos;
+      item.x = Math.max(0, Math.min(100 - item.w, (centerX - m.rect.left) / m.rect.width * 100 - item.w / 2));
+      item.y = Math.max(0, Math.min(100 - item.h, (centerY - m.rect.top) / m.rect.height * 100 - item.h / 2));
+    }
     const el = itemsEl.querySelector('[data-id="' + item.id + '"]');
-    if (el) { el.style.left = item.x + '%'; el.style.top = item.y + '%'; }
+    if (el) applyItemStyle(el, item);
   });
-  window.addEventListener('pointerup', () => state.moving = null);
+  const endGesture = event => { if (state.gesture && event.pointerId === state.gesture.pointerId) state.gesture = null; };
+  window.addEventListener('pointerup', endGesture);
+  window.addEventListener('pointercancel', endGesture);
 
   function point(event) {
     const rect = canvas.getBoundingClientRect();
@@ -213,14 +263,6 @@
     setTool('pen');
   }));
   $('brush-size').addEventListener('input', event => { state.size = event.target.value; $('brush-value').textContent = state.size + ' px'; });
-  $('item-size').addEventListener('input', event => {
-    const item = itemById(state.selected);
-    if (!item) return;
-    const ratio = item.h / item.w;
-    item.w = Number(event.target.value); item.h = item.w * ratio;
-    item.x = Math.min(item.x, 100 - item.w); item.y = Math.min(item.y, 100 - item.h);
-    renderItems();
-  });
   $('add-text').addEventListener('click', () => {
     const item = addItem({ type: 'text', x: 15, y: 31, w: 56, h: 30, text: '在這裡寫下你的心願…' });
     setTimeout(() => { const el = itemsEl.querySelector('[data-id="' + item.id + '"] textarea'); if (el) { el.focus(); el.select(); } }, 0);
@@ -306,7 +348,7 @@
         c.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, -w / 2 + pad, -h / 2 + pad, iw, ih); c.restore();
       } else {
         c.save(); c.translate(x + w / 2, y + h / 2); c.rotate((item.rotate || 0) * Math.PI / 180);
-        c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '55px sans-serif'; c.fillText(item.text, 0, 0); c.restore();
+        c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = Math.round(Math.min(w, h) * .75) + 'px sans-serif'; c.fillText(item.text, 0, 0); c.restore();
       }
     }
     c.drawImage(canvas, 0, 0);
